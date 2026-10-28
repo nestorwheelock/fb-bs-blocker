@@ -1,6 +1,5 @@
 'use strict';
 // Ordered fallbacks per feed element; first selector that matches anything wins.
-// Same shape as extensions/automation/selector_registry.js in rfw.
 var FBF_SELECTORS = {
   feedUnits: [
     { id: 'aria-posinset', css: '[aria-posinset]' },

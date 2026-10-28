@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "FB Filter",
+  "name": "fb-bs-blocker",
   "version": "0.3.0",
   "description": "Hides ads, follow suggestions and political posts in the Facebook feed.",
   "permissions": ["storage"],
@@ -20,5 +20,5 @@
     }
   ],
   "options_ui": { "page": "options.html", "open_in_tab": true },
-  "browser_specific_settings": { "gecko": { "id": "fb-filter@forge.local" } }
+  "browser_specific_settings": { "gecko": { "id": "fb-bs-blocker@users.noreply.github.com" } }
 }

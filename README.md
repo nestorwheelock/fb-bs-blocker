@@ -1,10 +1,22 @@
-# FB Filter
+# fb-bs-blocker
 
-Hides feed units on facebook.com that are ads, follow suggestions, or match a political
-keyword list. MV3; Chrome and Firefox. Class `site-bound` in the rfw extension standard.
+A browser extension that hides posts in the facebook.com feed that are ads, suggestions
+(follow, people you may know, Reels, groups you have not joined), or match a political
+keyword list. Manifest V3; Chrome and Firefox.
 
-Load unpacked from this directory. Options page: toggle each category, add keywords to
-hide, add keywords that exempt a post.
+Ads and group suggestions are identified from Facebook's own feed data, not from the label
+on the page, so a relabelled or scrambled "Sponsored" does not get past it. The page's
+requests are read in the browser and nothing leaves it.
+
+Load unpacked from this directory (`chrome://extensions`, Developer mode, Load unpacked).
+Options page: toggle each category, add keywords to hide, add keywords that exempt a post.
+
+Facebook changes its markup and data without notice; expect to adjust `selectors.js` and
+`adscan.js`. Not affiliated with or endorsed by Meta.
+
+## License
+
+BSD 2-Clause. See `LICENSE`.
 
 ## Layout
 
