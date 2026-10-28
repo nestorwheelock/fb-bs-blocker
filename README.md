@@ -2,8 +2,7 @@
 
 # fb-bs-blocker
 
-> This extension is a gift to you. If you want to buy me a coffee, send it on Venmo to
-> [@NestorWheelock](https://venmo.com/u/NestorWheelock) and put the word **gift** in the note.
+<p align="center"><a href="https://venmo.com/u/NestorWheelock"><img src="assets/gift.svg" alt="This extension is a gift to you. Buy me a coffee on Venmo, @NestorWheelock, and put the word gift in the note." width="760"></a></p>
 
 A browser extension that hides posts in the facebook.com feed that are ads, suggestions
 (posts with a Follow button, groups you have not joined, Reels), match a political keyword
