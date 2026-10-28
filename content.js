@@ -76,6 +76,9 @@
 
   function pass() {
     timer = null;
+    // After the extension is reloaded, the script left in an open tab has no extension
+    // context. Stop it, instead of throwing on every mutation until the tab is reloaded.
+    if (!chrome.runtime || !chrome.runtime.id) { observer.disconnect(); return; }
     scanInlineJson();
     const units = fbfPick(document, 'feedUnits');
     for (const el of units) evaluate(el);
@@ -114,7 +117,8 @@
       && addKeys(d.keys, Array.isArray(d.suggestionKeys) ? d.suggestionKeys : [])) schedule();
   });
 
-  new MutationObserver(schedule).observe(document.documentElement, {
+  const observer = new MutationObserver(schedule);
+  observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
   });
