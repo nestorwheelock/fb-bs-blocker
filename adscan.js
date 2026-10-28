@@ -14,7 +14,7 @@
   // streamed data.node), never from neighbouring bytes, so an organic post is not swept in.
 
   const KEY_LEN = 40;
-  const MARKERS = ['is_sponsored', 'sponsored_data', 'th_dat_spo', 'CAN_JOIN'];
+  const MARKERS = ['is_sponsored', 'sponsored_data', 'th_dat_spo', 'CAN_JOIN', 'IFR_POST_IN_NEWS_FEED', 'Comment as '];
 
   function isAdTracking(v) {
     if (typeof v !== 'string' || v.indexOf('is_sponsored') < 0) return false;
@@ -76,20 +76,31 @@
       if (n.viewer_forum_join_state === 'CAN_JOIN') {
         collect(unitOf(frames, n), out.suggestion, '', messageField);
       }
+      // The Follow button on a post's header: present on 19 of 108 captured feed posts, and on
+      // none of the ads or joinable-group posts among them.
+      if (n.follow_location === 'IFR_POST_IN_NEWS_FEED') {
+        collect(unitOf(frames, n), out.suggestion, '', messageField);
+      }
+      // The viewer's own name, from the comment box every post carries.
+      if (typeof n.comment_composer_placeholder === 'string') {
+        const m = /^Comment as (.{2,60})$/.exec(n.comment_composer_placeholder);
+        // some posts carry only the first name; the full name is the longer one
+        if (m && (!out.viewer || m[1].length > out.viewer.length)) out.viewer = m[1];
+      }
     }
     for (const k of Object.keys(n)) walk(n[k], frames.concat([[k, n[k]]]), out);
   }
 
-  // -> { ad: string[], suggestion: string[] }
+  // -> { ad: string[], suggestion: string[], viewer: string|null }
   function scanJson(value) {
-    const out = { ad: new Set(), suggestion: new Set() };
+    const out = { ad: new Set(), suggestion: new Set(), viewer: null };
     walk(value, [], out);
-    return { ad: Array.from(out.ad), suggestion: Array.from(out.suggestion) };
+    return { ad: Array.from(out.ad), suggestion: Array.from(out.suggestion), viewer: out.viewer };
   }
 
   // A response body: one JSON document, newline-delimited JSON, or either behind `for (;;);`.
   function scanText(text) {
-    const none = { ad: [], suggestion: [] };
+    const none = { ad: [], suggestion: [], viewer: null };
     if (typeof text !== 'string' || !MARKERS.some(m => text.indexOf(m) >= 0)) return none;
     const body = text.replace(/^\s*for\s*\(;;\);\s*/, '');
     const docs = [];
@@ -102,12 +113,14 @@
     }
     const ad = new Set();
     const suggestion = new Set();
+    let viewer = null;
     for (const d of docs) {
       const r = scanJson(d);
       r.ad.forEach(k => ad.add(k));
       r.suggestion.forEach(k => suggestion.add(k));
+      if (r.viewer && (!viewer || r.viewer.length > viewer.length)) viewer = r.viewer;
     }
-    return { ad: Array.from(ad), suggestion: Array.from(suggestion) };
+    return { ad: Array.from(ad), suggestion: Array.from(suggestion), viewer };
   }
 
   function adKeysFromJson(value) { return scanJson(value).ad; }

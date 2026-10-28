@@ -82,6 +82,30 @@ test('a post from a group the viewer can join is a suggestion keyed on its messa
   assert.deepEqual(scanJson(member).suggestion, []);
 });
 
+test('the Follow button on a post header is a suggestion, and the viewer name is read', () => {
+  const { scanJson } = require('../adscan.js');
+  const doc = { data: { node: { comet_sections: {
+    content: { story: { message: { text: 'A page post the viewer does not follow yet today.' } } },
+    header: { story: { action_links: { follow_location: 'IFR_POST_IN_NEWS_FEED', profile: { subscribe_status: 'CAN_SUBSCRIBE' } } } },
+    feedback: { feedback_context: { feedback_target_with_context: { comment_composer_placeholder: 'Comment as Some Viewer' } } },
+  } } } };
+  const r = scanJson(doc);
+  assert.ok(r.suggestion[0].startsWith('a page post the viewer'));
+  assert.equal(r.viewer, 'Some Viewer');
+  const other = JSON.parse(JSON.stringify(doc).replace('IFR_POST_IN_NEWS_FEED', 'SOMEWHERE_ELSE'));
+  assert.deepEqual(scanJson(other).suggestion, []);
+});
+
+test('the longer of two viewer names wins, in either order', () => {
+  const { scanJson, scanText } = require('../adscan.js');
+  const a = { x: { comment_composer_placeholder: 'Comment as Nestor' }, y: { comment_composer_placeholder: 'Comment as Nestor Wheelock' } };
+  assert.equal(scanJson(a).viewer, 'Nestor Wheelock');
+  const b = { y: { comment_composer_placeholder: 'Comment as Nestor Wheelock' }, x: { comment_composer_placeholder: 'Comment as Nestor' } };
+  assert.equal(scanJson(b).viewer, 'Nestor Wheelock');
+  const body = JSON.stringify({ p: { comment_composer_placeholder: 'Comment as Nestor' } }) + '\n' + JSON.stringify({ p: { comment_composer_placeholder: 'Comment as Nestor Wheelock' } });
+  assert.equal(scanText(body).viewer, 'Nestor Wheelock');
+});
+
 test('right-rail ad object with sponsored_data yields title and description', () => {
   const side = { nodes: [{ rhc_ad: { title: 'The AI for problem solvers | Claude', description: 'A product designer explains how it was built', sponsored_data: { ad_id: '9' } } }] };
   const keys = adKeysFromJson(side);
