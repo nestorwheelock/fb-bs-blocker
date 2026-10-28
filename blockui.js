@@ -8,6 +8,9 @@
   const SOURCE_MAX = 80;
   // Facebook's fixed top bar is about this tall; the button stays below it.
   const TOP_BAR = 56;
+  // Distance from a post's right edge to the button's left edge: past the "..." and close
+  // buttons (about 80px wide) plus the button's own width (about 75px).
+  const DOTS_CLEARANCE = 200;
 
   const host = document.createElement('div');
   host.style.cssText = 'all:initial;position:fixed;z-index:2147483646;display:none;';
@@ -67,7 +70,8 @@
     if (r.bottom < TOP_BAR + 40 || r.top > innerHeight - 40 || r.width < 100) { host.style.display = 'none'; return; }
     host.style.display = 'block';
     host.style.top = Math.max(r.top + 8, TOP_BAR + 8) + 'px';
-    host.style.left = Math.max(Math.min(r.right - 90, innerWidth - 110), 8) + 'px';
+    // Left of the post's own "..." and close buttons, which sit in the top right corner.
+    host.style.left = Math.max(Math.min(r.right - DOTS_CLEARANCE, innerWidth - 110), 8) + 'px';
   }
 
   function show(el) {
