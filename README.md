@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo.png" alt="Facebook Bullshit Blocker" width="280"></p>
+
 # fb-bs-blocker
 
 A browser extension that hides posts in the facebook.com feed that are ads, suggestions
@@ -162,6 +164,7 @@ member's; text normalization.
 - `content.js` - observes the feed, applies the verdicts
 - `hide.css` - `[data-fbf-hidden] { display: none !important }`
 - `options.html`, `options.js` - settings in `chrome.storage.sync`
+- `assets/logo.png`, `icons/` - logo and the extension icons
 - `test/` - tests
 
 Permissions: `storage` and two Facebook hosts. No `tabs`, `scripting` or `webRequest`.
