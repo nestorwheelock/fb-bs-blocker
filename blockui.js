@@ -6,6 +6,8 @@
   const HIDDEN = 'data-fbf-hidden';
   const LEAVE_MS = 400;
   const SOURCE_MAX = 80;
+  // Facebook's fixed top bar is about this tall; the button stays below it.
+  const TOP_BAR = 56;
 
   const host = document.createElement('div');
   host.style.cssText = 'all:initial;position:fixed;z-index:2147483646;display:none;';
@@ -62,9 +64,9 @@
 
   function place(el) {
     const r = el.getBoundingClientRect();
-    if (r.bottom < 40 || r.top > innerHeight - 40 || r.width < 100) { host.style.display = 'none'; return; }
+    if (r.bottom < TOP_BAR + 40 || r.top > innerHeight - 40 || r.width < 100) { host.style.display = 'none'; return; }
     host.style.display = 'block';
-    host.style.top = Math.max(r.top + 8, 8) + 'px';
+    host.style.top = Math.max(r.top + 8, TOP_BAR + 8) + 'px';
     host.style.left = Math.max(Math.min(r.right - 90, innerWidth - 110), 8) + 'px';
   }
 

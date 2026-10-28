@@ -111,7 +111,8 @@ function render() {
     if (opened.has(b.id)) body.append(detailRow(b));
   }
   $('empty').hidden = blocks.length > 0;
-  $('count').textContent = list.length === blocks.length ? blocks.length + ' blocks' : list.length + ' of ' + blocks.length + ' blocks';
+  const noun = blocks.length === 1 ? ' block' : ' blocks';
+  $('count').textContent = list.length === blocks.length ? blocks.length + noun : list.length + ' of ' + blocks.length + noun;
 }
 
 $('addForm').addEventListener('submit', async ev => {
