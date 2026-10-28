@@ -1,0 +1,5 @@
+[extension]
+class = "site-bound"
+
+[layout]
+development = ["test/"]

@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>FB Filter</title>
+<style>
+  body { font: 14px system-ui; max-width: 36rem; margin: 2rem auto; }
+  label { display: block; margin: .4rem 0; }
+  textarea { width: 100%; height: 6rem; }
+</style>
+<h1>FB Filter</h1>
+<label><input type="checkbox" id="ads"> Hide ads (Sponsored)</label>
+<label><input type="checkbox" id="suggestions"> Hide suggestions (Follow, People you may know, Reels, groups)</label>
+<label><input type="checkbox" id="politics"> Hide politics (keyword match)</label>
+<p>Extra keywords to hide, one per line:</p>
+<textarea id="extraKeywords"></textarea>
+<p>Allow keywords (a post containing one is never hidden as politics), one per line:</p>
+<textarea id="allowKeywords"></textarea>
+<p id="status"></p>
+<script src="options.js"></script>
