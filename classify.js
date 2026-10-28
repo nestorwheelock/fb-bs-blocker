@@ -11,7 +11,7 @@
     allowKeywords: [],
   };
 
-  const AD_LINES = new Set(['sponsored', 'paid partnership', 'promoted']);
+  const AD_LINES = new Set(['sponsored', 'ad', 'paid partnership', 'promoted']);
   const AD_HREF_RE = /\/ads\/(about|preferences)|[?&]ad_id=/i;
 
   const SUGGEST_LINES = new Set([

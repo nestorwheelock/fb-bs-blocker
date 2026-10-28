@@ -3,6 +3,7 @@
 // Same shape as extensions/automation/selector_registry.js in rfw.
 var FBF_SELECTORS = {
   feedUnits: [
+    { id: 'aria-posinset', css: '[aria-posinset]' },
     { id: 'feed-children', css: '[role="feed"] > div' },
     { id: 'feedunit-pagelet', css: '[data-pagelet^="FeedUnit"]' },
     { id: 'article-role', css: '[role="article"]' },

@@ -14,6 +14,11 @@ test('Sponsored line hides as ad', () => {
   assert.deepEqual([r.hide, r.reason], [true, 'ad']);
 });
 
+test('Ad label hides as ad, the word inside a sentence does not', () => {
+  assert.equal(classify(f(['Zoom Room Dog Training', 'Ad', 'Give your puppy the best start']), {}).reason, 'ad');
+  assert.equal(classify(f(['Sam Lee', 'Ad blockers are great']), {}).hide, false);
+});
+
 test('ads href hides as ad', () => {
   const r = classify(f(['Acme', 'Buy now'], ['https://www.facebook.com/ads/about/?id=1']), {});
   assert.equal(r.reason, 'ad');
