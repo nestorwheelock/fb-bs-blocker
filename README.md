@@ -3,26 +3,33 @@
 # fb-bs-blocker
 
 A browser extension that hides posts in the facebook.com feed that are ads, suggestions
-(follow, people you may know, Reels, groups you have not joined), or match a political
+(posts with a Follow button, groups you have not joined, Reels), or match a political
 keyword list. Manifest V3; Chrome and Firefox. BSD 2-Clause.
 
-Ads and group suggestions are identified from Facebook's own feed data, not from the label
-on the page, so a relabelled or scrambled "Sponsored" does not get past it. Responses are
-read in the browser and nothing leaves it. Not affiliated with or endorsed by Meta.
+Ads and suggestions are identified from Facebook's own feed data, not from the label on the
+page, so a relabelled or scrambled "Sponsored" does not get past it. Responses are read in
+the browser and nothing leaves it. Not affiliated with or endorsed by Meta.
 
 ## Install
 
-`chrome://extensions`, turn on Developer mode, Load unpacked, choose this directory. Reload
-the extension after any change, then reload the Facebook tab. Options page: toggle each
-category, add keywords to hide, add keywords that exempt a post. The page console prints one
-line per pass, beginning `[fbf]`, with the version and the counts of feed posts found, ad
-keys, join keys and posts hidden.
+`chrome://extensions`, turn on Developer mode, Load unpacked, choose this directory. After any
+change, reload the extension and then reload the Facebook tab. Options page: toggle each
+category, add keywords to hide, add keywords that exempt a post.
+
+The page console (DevTools, Console) prints two kinds of line, both beginning `[fbf]`:
+
+- one summary line when the counts change: version, feed posts found, ad keys, right-column
+  keys, suggestion keys, posts hidden, and whether your name was found
+- one line per hide: the reason, what matched, and the first lines of the post
+
+The second is how to find out why a post is missing.
 
 ## Status
 
-Developed against captured Facebook traffic and tested offline (`node --test test/*.test.js`).
-Behavior in a live browser is reported by the person using it, and Facebook changes its
-markup and data without notice. Expect to adjust `selectors.js` and `adscan.js`.
+Version 0.4.2. Developed against captured Facebook traffic and tested offline
+(`node --test test/*.test.js`). Behavior in a live browser is reported by the person using it,
+and Facebook changes its markup and data without notice. Expect to adjust `selectors.js` and
+`adscan.js`. What has and has not been seen on the live page is listed under Limits.
 
 ## Methods
 
@@ -85,11 +92,14 @@ it.
 |---|---|---|
 | `tracking` string that parses to `is_sponsored: 1` | inside a feed story | ad |
 | non-null `th_dat_spo` | on the feed post object | ad |
-| non-null `sponsored_data` | right-column ad object (`rhc_ad`) | ad |
+| non-null `sponsored_data` | right-column ad object, beside a nested `rhc_ad` | ad |
 | `viewer_forum_join_state: "CAN_JOIN"` | inside a feed story | post from a group the viewer has not joined |
+| `follow_location: "IFR_POST_IN_NEWS_FEED"` | story action links, with `subscribe_status: "CAN_SUBSCRIBE"` | post whose header shows a Follow button |
+| `comment_composer_placeholder: "Comment as <name>"` | every post | the viewer's own name |
 
 `th_dat_spo` was non-null on 11 of 11 ads and 0 of 19 organic posts in one capture, and it
-holds when `tracking` is missing, so both are checked.
+holds when `tracking` is missing, so both are checked. In a later capture the Follow marker
+was on 19 of 108 feed posts and on none of the ads or group posts among them.
 
 **Post boundary.** A feed post is the `node` under `news_feed.edges[]`, or a streamed
 `data.node`. The text of an ad is read from that one post only, never from neighbouring
@@ -100,10 +110,15 @@ post beside it.
 produced keys such as "Comment as <viewer>", CSS class lists, and a group's privacy blurb.
 All of those appear on organic posts, so keying on them would hide the whole feed. The
 extractor reads only named fields: `message.text`, `title_with_entities.text`,
-`description.text`, `title`, `description`, `link_title`, `link_description`. For group
-suggestions only `message.text`, because a group's description is shared by every post from
-that group. One video ad had no message text and was missed until `link_title` and
+`description.text`, `title`, `description`, `link_title`, `link_description`. For group and
+Follow suggestions only `message.text`, because a group's description is shared by every post
+from that group. One video ad had no message text and was missed until `link_title` and
 `link_description` were added.
+
+**Right-column cards.** A card displays only a title and a domain; its description is in the
+data but never drawn. The fields sit in a nested `rhc_ad` next to `sponsored_data`. The key is
+the title and the domain together, and a card must show both. A title alone could be a word
+("Claude") that appears elsewhere.
 
 ### 5. Deliver it in the page
 
@@ -115,32 +130,61 @@ that group. One video ad had no message text and was missed until `link_title` a
 - A key is the first 40 characters of an ad's or suggestion's text, lowercased with
   whitespace collapsed. A feed post whose visible text contains a key is hidden. Keys that
   arrive after the post is drawn cause every post to be checked again.
-- Right-column ads: the link card whose text contains an ad key is hidden, then the
+- Right-column ads: the link card whose text matches a title and domain is hidden, then the
   "Sponsored" heading above it.
+- The viewer's own posts are exempt from the politics rule. Their name is found in the first
+  eight lines of a post after the decoy "Facebook" lines are dropped.
 
 Why two worlds: wrapping `fetch` has to happen in the page's world, and reaching extension
 storage has to happen in the isolated one.
 
-### 6. Validation
+### 6. Problems found by running it, and what each was
+
+Each of these came from the console on the live page, not from reading the code.
+
+- **"Extension context invalidated".** Reloading the extension leaves the old script running
+  in the open tab with no connection to it. The script now stops itself when its extension
+  context is gone.
+- **Posts flickering on and off.** A hidden element is not rendered, so its `innerText` has no
+  line breaks. The label rules read whole lines, so on the next check a hidden "Follow" or
+  "Ad" post no longer matched, was shown, and was hidden again. The check now lifts the hide
+  attribute, reads the text as rendered, and restores it in the same task, so nothing is
+  painted in between. Separately, Facebook empties posts that scroll out of view and refills
+  them; a post with under 40 characters of text is left as it is instead of being un-hidden.
+  The delay before hiding is one animation frame, and the page-wide scans run at most once a
+  second.
+- **The author's own post hidden as politics.** The post about this extension said "political".
+  An exemption for the viewer's own posts looked at the first eight lines, but those eight are
+  decoys, so the name was never found. The decoys are now dropped first. Each hide is also
+  logged with its reason now, which is how this was found.
+- **A right-column card not hidden.** The only ad key from the data was a description that is
+  never displayed, and the displayed titles were shorter than the 20-character minimum for
+  keys. Keying on title and domain fixed the design; the first version of that code and its
+  test both put the fields on the wrong object, and it was running the extractor against the
+  real response that showed it. Test fixtures should be copied from the real shape.
+
+### 7. Validation
 
 Run against captured responses with the real extractor, counting by feed post:
 
-| capture | feed posts | ads | ads keyed | join posts | join keyed | organic posts keyed |
-|---|---|---|---|---|---|---|
-| first | 30 | 11 | 10, then 11 after adding link fields | | | 0 of 19 |
-| second | 50 | 5 | 5 | 8 | 8 | 0 |
+| capture | feed posts | ads | ads keyed | join posts | join keyed | Follow posts | Follow keyed | organic keyed |
+|---|---|---|---|---|---|---|---|---|
+| first | 30 | 11 | 10, then 11 after adding link fields | | | | | 0 of 19 |
+| second | 50 | 5 | 5 | 8 | 8 | | | 0 |
+| third | 108 | 25 | 25 | 9 | 9 | 19 | 19 | 0 |
 
 In the first capture, 10 of the 11 ads were keyed before `link_title` was added, which is how
-the missing field was found. The right-column ads in the page's inline data were extracted
-as well.
+the missing field was found. From the third capture the extractor produced six right-column
+keys, and the text of one card from a screenshot matched its key.
 
-### 7. Tests
+### 8. Tests
 
 `node --test test/*.test.js`. Fixtures are synthetic and written to match the structure
 found, so no captured traffic is committed. They cover: only the ad's own post contributes
 keys; UI placeholders never become keys; newline-delimited, partial and `for (;;);`-prefixed
-bodies; the right-column object; a video ad with no message; a joinable group post versus a
-member's; text normalization.
+bodies; the right-column card; a video ad with no message; a joinable group post versus a
+member's; the Follow marker; the viewer's name, including the longer of two forms; finding the
+viewer past the decoy lines; text normalization.
 
 ## Limits
 
@@ -148,18 +192,23 @@ member's; text normalization.
   hidden by data. The label rules in `classify.js` may still catch it.
 - Matching is on text. If Facebook changes punctuation between its data and its display, a
   key will not match.
+- Any post whose header shows a Follow button is hidden under suggestions, including a post
+  from a page you meant to look at.
 - Politics is a keyword list: it will miss posts that do not use the words and hide posts
-  that do (a comment quoting a word hides its post).
-- The right-column card hiding is checked against captured data, not yet against the live
-  column.
+  that do (a comment quoting a word hides its post). Your own posts are exempt from it, and
+  from nothing else.
+- Seen working on the live page: ads hidden from feed data, a Reels row and a group "Join"
+  row hidden by label, one hide logged per post, the viewer's name found. Not yet confirmed on
+  the live page after the last changes: the right-column cards, and your own post reappearing.
 - Chrome was the browser used. Firefox is declared in the manifest and untested.
 - The analysis scripts used to find the markers are not in this repository.
 
 ## Layout
 
-- `classify.js` - rendered-text classifier
+- `classify.js` - rendered-text classifier, and the own-post check
 - `selectors.js` - ordered fallback selectors for feed posts
-- `adscan.js` - extractor for ad and suggestion text from Facebook's feed data
+- `adscan.js` - extractor for ad, suggestion, right-column and viewer data from Facebook's feed
+  data
 - `hook_main.js` - page-world response reader
 - `content.js` - observes the feed, applies the verdicts
 - `hide.css` - `[data-fbf-hidden] { display: none !important }`
