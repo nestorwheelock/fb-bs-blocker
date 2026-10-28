@@ -41,6 +41,16 @@ test('extra keywords extend and allow keywords override', () => {
   assert.equal(classify(f(['Trump card game night']), { allowKeywords: ['card game'] }).hide, false);
 });
 
+test('the viewer is found past the decoy lines that open every post', () => {
+  const { isOwn } = require('../classify.js');
+  const decoys = Array(8).fill('Facebook');
+  assert.equal(isOwn(decoys.concat(['Nestor Wheelock', '3 hours ago', 'hello']), 'Nestor Wheelock'), true);
+  assert.equal(isOwn(decoys.concat(['Sam Lee', '3 hours ago']), 'Nestor Wheelock'), false);
+  assert.equal(isOwn(decoys.concat(['Nestor Wheelock']), null), false);
+  // a name far down the post (a comment) is not authorship
+  assert.equal(isOwn(['Sam Lee', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'Nestor Wheelock'], 'Nestor Wheelock'), false);
+});
+
 test('category toggles are respected', () => {
   assert.equal(classify(f(['Sponsored']), { ads: false }).hide, false);
   assert.equal(classify(f(['Follow']), { suggestions: false }).hide, false);

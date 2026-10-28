@@ -48,7 +48,7 @@
     if (prev !== null) el.removeAttribute(HIDDEN);
     const f = features(el);
 
-    const own = viewer !== null && f.lines.slice(0, 8).indexOf(viewer) >= 0;
+    const own = FBF.isOwn(f.lines, viewer);
     let verdict = FBF.classify(f, own ? Object.assign({}, settings, { politics: false }) : settings);
     if (!verdict.hide && settings.ads && FBFAds.unitIsAd(el.textContent, adKeys)) {
       verdict = { hide: true, reason: 'ad', detail: 'data' };
@@ -60,7 +60,7 @@
     if (verdict.hide) {
       el.setAttribute(HIDDEN, verdict.reason);
       if (prev === null) {
-        console.log('[fbf] hide', verdict.reason, verdict.detail, '|', f.lines.slice(0, 3).join(' / ').slice(0, 90));
+        console.log('[fbf] hide', verdict.reason, verdict.detail, '|', FBF.readLines(f.lines).slice(0, 3).join(' / ').slice(0, 90));
       }
     }
   }

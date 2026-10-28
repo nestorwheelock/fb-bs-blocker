@@ -82,5 +82,15 @@
     return { hide: false, reason: null, detail: '' };
   }
 
-  return { classify, DEFAULT_SETTINGS, POLITICS_DEFAULT };
+  // Every post opens with a run of decoy lines that read just "Facebook"; the author comes
+  // after them. Drop the decoys, then look for the viewer's name in the first lines.
+  function readLines(lines) {
+    return lines.filter(l => l !== 'Facebook');
+  }
+
+  function isOwn(lines, viewer) {
+    return !!viewer && readLines(lines).slice(0, 8).indexOf(viewer) >= 0;
+  }
+
+  return { classify, isOwn, readLines, DEFAULT_SETTINGS, POLITICS_DEFAULT };
 });
