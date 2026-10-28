@@ -26,7 +26,10 @@
 
   function pass() {
     timer = null;
-    for (const el of fbfPick(document, 'feedUnits')) evaluate(el);
+    const units = fbfPick(document, 'feedUnits');
+    for (const el of units) evaluate(el);
+    console.log('[fbf] v' + chrome.runtime.getManifest().version, units.length + ' units',
+      document.querySelectorAll('[' + HIDDEN + ']').length + ' hidden');
   }
 
   function schedule() {
