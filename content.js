@@ -2,6 +2,7 @@
   'use strict';
 
   const SETTINGS_KEY = 'fbf-settings';
+  const RULES_KEY = 'fbf-rules';
   const HIDDEN = 'data-fbf-hidden';
   // A feed post with less text than this is a placeholder: Facebook empties posts that scroll
   // out of view and fills them again. A placeholder is neither hidden nor shown by us, so the
@@ -11,6 +12,8 @@
   // constantly, and reprocessing every node on every mutation is a busy loop.
   let seen = new WeakMap();
   let settings = FBF.DEFAULT_SETTINGS;
+  // Blocks the person made (button over a post, or the options page): always on.
+  let rules = [];
   let frame = null;
   let slowTimer = null;
   let lastSlow = 0;
@@ -49,7 +52,10 @@
     const f = features(el);
 
     const own = FBF.isOwn(f.lines, viewer);
-    let verdict = FBF.classify(f, own ? Object.assign({}, settings, { politics: false }) : settings);
+    const block = FBFRules.match(FBF.readLines(f.lines), el.textContent, rules);
+    let verdict = block
+      ? { hide: true, reason: 'blocked', detail: block.kind + ' #' + block.id }
+      : FBF.classify(f, own ? Object.assign({}, settings, { politics: false }) : settings);
     if (!verdict.hide && settings.ads && FBFAds.unitIsAd(el.textContent, adKeys)) {
       verdict = { hide: true, reason: 'ad', detail: 'data' };
     }
@@ -150,8 +156,16 @@
     });
   }
 
+  function loadRules() {
+    chrome.storage.local.get(RULES_KEY, got => {
+      rules = Array.isArray(got && got[RULES_KEY]) ? got[RULES_KEY] : [];
+      reset();
+    });
+  }
+
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'sync' && changes[SETTINGS_KEY]) load();
+    if (area === 'local' && changes[RULES_KEY]) loadRules();
   });
 
   // Keys read from feed responses by hook_main.js (MAIN world). A page script can post this
@@ -169,4 +183,5 @@
     subtree: true,
   });
   load();
+  loadRules();
 })();

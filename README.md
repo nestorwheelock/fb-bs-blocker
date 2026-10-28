@@ -24,9 +24,36 @@ The page console (DevTools, Console) prints two kinds of line, both beginning `[
 
 The second is how to find out why a post is missing.
 
+## Blocks
+
+Besides the automatic filters, you can block things by hand. Two kinds:
+
+- **source**: the exact name an author, page or group post opens with
+- **text**: a phrase (8 characters or more) the post contains
+
+On Facebook, point at a post: a Block button floats at its top right. Its menu offers "Block this
+post" (stores the post's first line of its own words) and "Block this source" (stores the
+author or page name). The post is hidden at once. Each block also stores the post's shape: its
+first lines, its author, the page path, its size, and a hash of its element structure (tags and
+nesting, no class names), so you can see later why it matched.
+
+The options page (the toolbar button opens it) lists every block: add one, search, switch it on
+or off, edit its kind, value or note, see its stored shape under Details, delete it. Matching is
+case- and spacing-insensitive. A block applies to every post, your own included.
+
+**Where it is kept.** Blocks live in IndexedDB under the extension's own origin (database
+`fbf-blocks`), shared by the background worker and the options page. Content scripts cannot reach
+that database, so after every change the worker copies `{id, kind, value, enabled}` into
+`chrome.storage.local` under `fbf-rules`, which the page script reads. Nothing leaves the browser.
+
+**Export.** "Export .sqlite" builds a real SQLite database file in the browser with the vendored
+sqlite-wasm (`vendor/sqlite-wasm/`, Apache-2.0, see its `NOTICE.md`) and saves it. "Export .sql"
+saves the same data as SQL text for `sqlite3 blocks.sqlite < blocks.sql`. The table:
+`blocks(id, kind, value, note, enabled, created_at, updated_at, page, shape_json)`.
+
 ## Status
 
-Version 0.4.2. Developed against captured Facebook traffic and tested offline
+Version 0.5.0. Developed against captured Facebook traffic and tested offline
 (`node --test test/*.test.js`). Behavior in a live browser is reported by the person using it,
 and Facebook changes its markup and data without notice. Expect to adjust `selectors.js` and
 `adscan.js`. What has and has not been seen on the live page is listed under Limits.
@@ -212,11 +239,17 @@ viewer past the decoy lines; text normalization.
 - `hook_main.js` - page-world response reader
 - `content.js` - observes the feed, applies the verdicts
 - `hide.css` - `[data-fbf-hidden] { display: none !important }`
-- `options.html`, `options.js` - settings in `chrome.storage.sync`
+- `rules.js` - block rules: validation, matching, the shape recorded for a post
+- `store.js` - the block list in IndexedDB, and publishing it for the page script
+- `background.js` - service worker: receives "block this" from the page, opens the options page
+- `blockui.js` - the floating Block button over a post
+- `export.js` - the block list as SQL; `vendor/sqlite-wasm/` turns it into a `.sqlite` file
+- `options.html`, `options.js` - settings in `chrome.storage.sync`, and the blocks manager
 - `assets/logo.png`, `icons/` - logo and the extension icons
 - `test/` - tests
 
-Permissions: `storage` and two Facebook hosts. No `tabs`, `scripting` or `webRequest`.
+Permissions: `storage` and two Facebook hosts. The extension pages' content security policy adds
+`wasm-unsafe-eval`, which sqlite-wasm needs. No `tabs`, `scripting` or `webRequest`.
 
 ## License
 

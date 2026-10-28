@@ -51,7 +51,7 @@
     for (const k of Object.keys(n)) {
       const v = n[k];
       if (typeof v === 'string') {
-        if (accept(parent, k) && readable(v)) out.add(normalize(v).slice(0, KEY_LEN));
+        if (accept(parent, k) && readable(v)) out.add(normalize(v).slice(0, KEY_LEN).trim());
       } else collect(v, out, k, accept);
     }
     return out;

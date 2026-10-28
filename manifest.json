@@ -1,11 +1,14 @@
 {
   "manifest_version": 3,
   "name": "fb-bs-blocker",
-  "version": "0.4.2",
-  "description": "Hides ads, follow suggestions and political posts in the Facebook feed.",
+  "version": "0.5.0",
+  "description": "Hides ads, follow suggestions, political posts and anything you block in the Facebook feed.",
   "icons": { "16": "icons/icon-16.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" },
   "permissions": ["storage"],
   "host_permissions": ["https://www.facebook.com/*", "https://m.facebook.com/*"],
+  "background": { "service_worker": "background.js", "scripts": ["rules.js", "store.js", "background.js"] },
+  "action": { "default_title": "fb-bs-blocker: blocks and settings" },
+  "content_security_policy": { "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'" },
   "content_scripts": [
     {
       "matches": ["https://www.facebook.com/*", "https://m.facebook.com/*"],
@@ -15,7 +18,7 @@
     },
     {
       "matches": ["https://www.facebook.com/*", "https://m.facebook.com/*"],
-      "js": ["classify.js", "adscan.js", "selectors.js", "content.js"],
+      "js": ["classify.js", "adscan.js", "selectors.js", "rules.js", "content.js", "blockui.js"],
       "css": ["hide.css"],
       "run_at": "document_idle"
     }
