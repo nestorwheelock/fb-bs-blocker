@@ -1,14 +1,20 @@
 {
   "manifest_version": 3,
   "name": "FB Filter",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Hides ads, follow suggestions and political posts in the Facebook feed.",
   "permissions": ["storage"],
   "host_permissions": ["https://www.facebook.com/*", "https://m.facebook.com/*"],
   "content_scripts": [
     {
       "matches": ["https://www.facebook.com/*", "https://m.facebook.com/*"],
-      "js": ["classify.js", "selectors.js", "content.js"],
+      "js": ["adscan.js", "hook_main.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://www.facebook.com/*", "https://m.facebook.com/*"],
+      "js": ["classify.js", "adscan.js", "selectors.js", "content.js"],
       "css": ["hide.css"],
       "run_at": "document_idle"
     }

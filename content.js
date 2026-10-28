@@ -9,6 +9,12 @@
   let settings = FBF.DEFAULT_SETTINGS;
   let timer = null;
 
+  // Text of every ad Facebook's own data names: from inline JSON in the page and from the
+  // feed responses hook_main.js reads. A unit showing that text is an ad whatever it is labelled.
+  const adKeys = new Set();
+  const scannedScripts = new WeakSet();
+  let railSeen = new WeakMap();
+
   function features(el) {
     const lines = (el.innerText || '').split('\n').map(l => l.trim()).filter(Boolean);
     const hrefs = Array.from(el.querySelectorAll('a[href]')).map(a => a.getAttribute('href'));
@@ -19,17 +25,56 @@
     const len = (el.textContent || '').length;
     if (len === 0 || seen.get(el) === len) return;
     seen.set(el, len);
-    const verdict = FBF.classify(features(el), settings);
+    let verdict = FBF.classify(features(el), settings);
+    if (!verdict.hide && settings.ads && FBFAds.unitIsAd(el.textContent, adKeys)) {
+      verdict = { hide: true, reason: 'ad', detail: 'data' };
+    }
     if (verdict.hide) el.setAttribute(HIDDEN, verdict.reason);
     else el.removeAttribute(HIDDEN);
   }
 
+  function addKeys(keys) {
+    let added = false;
+    for (const k of keys) if (!adKeys.has(k)) { adKeys.add(k); added = true; }
+    if (added) { seen = new WeakMap(); railSeen = new WeakMap(); }
+    return added;
+  }
+
+  function scanInlineJson() {
+    for (const s of document.querySelectorAll('script[type="application/json"]')) {
+      if (scannedScripts.has(s)) continue;
+      scannedScripts.add(s);
+      addKeys(FBFAds.adKeysFromText(s.textContent || ''));
+    }
+  }
+
+  // Right-column ads are not feed units: hide the link card whose text is an ad's, then the
+  // "Sponsored" heading above them.
+  function hideRail(units) {
+    if (!settings.ads || adKeys.size === 0) return;
+    const inUnit = el => units.some(u => u.contains(el));
+    for (const a of document.querySelectorAll('a[href]')) {
+      const len = (a.textContent || '').length;
+      if (len === 0 || len > 600 || railSeen.get(a) === len) continue;
+      railSeen.set(a, len);
+      if (inUnit(a)) continue;
+      if (FBFAds.unitIsAd(a.textContent, adKeys)) a.setAttribute(HIDDEN, 'ad');
+    }
+    if (document.querySelector('a[' + HIDDEN + '="ad"]:not([aria-posinset] *)')) {
+      for (const h of document.querySelectorAll('span,h2,h3')) {
+        if (h.children.length === 0 && h.textContent.trim() === 'Sponsored' && !inUnit(h)) h.setAttribute(HIDDEN, 'ad');
+      }
+    }
+  }
+
   function pass() {
     timer = null;
+    scanInlineJson();
     const units = fbfPick(document, 'feedUnits');
     for (const el of units) evaluate(el);
+    hideRail(units);
     console.log('[fbf] v' + chrome.runtime.getManifest().version, units.length + ' units',
-      document.querySelectorAll('[' + HIDDEN + ']').length + ' hidden');
+      adKeys.size + ' ad keys', document.querySelectorAll('[' + HIDDEN + ']').length + ' hidden');
   }
 
   function schedule() {
@@ -39,6 +84,7 @@
   function reset() {
     document.querySelectorAll('[' + HIDDEN + ']').forEach(e => e.removeAttribute(HIDDEN));
     seen = new WeakMap();
+    railSeen = new WeakMap();
     schedule();
   }
 
@@ -51,6 +97,13 @@
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'sync' && changes[SETTINGS_KEY]) load();
+  });
+
+  // Keys read from feed responses by hook_main.js (MAIN world). A page script can post this
+  // message too; the worst it can do is hide something, so it is not authenticated.
+  window.addEventListener('message', ev => {
+    const d = ev.data;
+    if (ev.source === window && d && d.source === 'fbf-ads' && Array.isArray(d.keys) && addKeys(d.keys)) schedule();
   });
 
   new MutationObserver(schedule).observe(document.documentElement, {
