@@ -51,6 +51,20 @@ test('a response with no ad marker is skipped without parsing', () => {
   assert.deepEqual(adKeysFromText('not json'), []);
 });
 
+test('a video ad with th_dat_spo and no message is keyed on its link title', () => {
+  const videoAd = {
+    data: { node: {
+      th_dat_spo: { client_token: 'x' },
+      comet_sections: { attachment: { action_links: { link_title: 'Learn CPR in two minutes, it could save a life', link_description: 'A proud national sponsor of lifesaver training' } } },
+    } },
+  };
+  const keys = adKeysFromJson(videoAd);
+  assert.ok(keys.some(k => k.startsWith('learn cpr in two minutes')));
+  assert.ok(keys.some(k => k.startsWith('a proud national sponsor')));
+  const organic = { data: { node: { th_dat_spo: null, comet_sections: { attachment: { action_links: { link_title: 'A recipe for lemon bars everyone loves' } } } } } };
+  assert.deepEqual(adKeysFromJson(organic), []);
+});
+
 test('right-rail ad object with sponsored_data yields title and description', () => {
   const side = { nodes: [{ rhc_ad: { title: 'The AI for problem solvers | Claude', description: 'A product designer explains how it was built', sponsored_data: { ad_id: '9' } } }] };
   const keys = adKeysFromJson(side);

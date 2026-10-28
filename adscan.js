@@ -5,7 +5,8 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   // Reads Facebook's own feed data and returns the visible text of every ad in it, so the
   // page can hide the unit that shows that text. Two ad markers appear in the data:
-  //   feed ads         a story whose `tracking` string parses to {"is_sponsored":1}
+  //   feed ads         a story whose `tracking` string parses to {"is_sponsored":1}, or an
+  //                    object carrying a non-null `th_dat_spo`
   //   right-rail ads   an object carrying a non-null `sponsored_data`
   // A feed ad's text is read from its whole unit (the `node` under news_feed.edges[] or a
   // streamed data.node), never from neighbouring bytes, so an organic post is not swept in.
@@ -33,7 +34,7 @@
   // identifiers; keying on those would hide the whole feed.
   function adTextField(parent, key) {
     return (key === 'text' && (parent === 'message' || parent === 'title_with_entities' || parent === 'description'))
-      || key === 'title' || key === 'description';
+      || key === 'title' || key === 'description' || key === 'link_title' || key === 'link_description';
   }
 
   function collect(n, out, parent) {
@@ -51,7 +52,9 @@
   function walk(n, frames, out) {
     if (!n || typeof n !== 'object') return;
     if (!Array.isArray(n)) {
-      if (isAdTracking(n.tracking)) {
+      // `th_dat_spo` is a non-null object on every ad and null/absent on organic posts
+      // (11 of 11 and 0 of 19 in a captured feed), and survives when `tracking` is missing.
+      if (isAdTracking(n.tracking) || (n.th_dat_spo && typeof n.th_dat_spo === 'object')) {
         let unit = null;
         for (let i = frames.length - 1; i >= 0; i--) if (frames[i][0] === 'node') { unit = frames[i][1]; break; }
         collect(unit || n, out);
