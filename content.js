@@ -39,7 +39,16 @@
     return { lines, hrefs };
   }
 
+  // A post opened in a dialog (Comment, a photo, a shared post) is one the person chose to
+  // open. Its header carries a Follow button that the feed copy lacks, so the label rules would
+  // hide the whole dialog body. Never hide inside a dialog, and give back what was hidden there.
+  function inDialog(el) { return !!el.closest('[role="dialog"]'); }
+
   function evaluate(el) {
+    if (inDialog(el)) {
+      if (el.hasAttribute(HIDDEN)) el.removeAttribute(HIDDEN);
+      return;
+    }
     const len = (el.textContent || '').length;
     if (len < MIN_TEXT || seen.get(el) === len) return;
     seen.set(el, len);
@@ -99,7 +108,7 @@
       const len = (a.textContent || '').length;
       if (len === 0 || len > 600 || railSeen.get(a) === len) continue;
       railSeen.set(a, len);
-      if (inUnit(a)) continue;
+      if (inUnit(a) || inDialog(a)) continue;
       if (FBFAds.unitIsAd(a.textContent, adKeys) || FBFAds.railMatches(a.textContent, railKeys)) {
         a.setAttribute(HIDDEN, 'ad');
         console.log('[fbf] hide rail', (a.textContent || '').slice(0, 70));
