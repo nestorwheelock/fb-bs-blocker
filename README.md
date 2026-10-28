@@ -2,6 +2,9 @@
 
 # fb-bs-blocker
 
+> This extension is a gift to you. If you want to buy me a coffee, send it on Venmo to
+> [@NestorWheelock](https://venmo.com/u/NestorWheelock) and put the word **gift** in the note.
+
 A browser extension that hides posts in the facebook.com feed that are ads, suggestions
 (posts with a Follow button, groups you have not joined, Reels), match a political keyword
 list, or are ones you blocked yourself. Manifest V3; Chrome and Firefox. BSD 2-Clause.
