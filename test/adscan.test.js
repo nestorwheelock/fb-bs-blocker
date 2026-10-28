@@ -65,6 +65,23 @@ test('a video ad with th_dat_spo and no message is keyed on its link title', () 
   assert.deepEqual(adKeysFromJson(organic), []);
 });
 
+test('a post from a group the viewer can join is a suggestion keyed on its message only', () => {
+  const { scanJson } = require('../adscan.js');
+  const joinable = {
+    data: { viewer: { news_feed: { edges: [{ node: { comet_sections: {
+      content: { story: { message: { text: 'Cutting into my cabin wall for a new bedroom window.' } } },
+      group: { description: { text: 'Anyone can see who is in the group and what they post.' } },
+      footer: { if_viewer_can_join_group: { join_action: { group: { viewer_forum_join_state: 'CAN_JOIN' } } } },
+    } } }] } } },
+  };
+  const r = scanJson(joinable);
+  assert.deepEqual(r.ad, []);
+  assert.equal(r.suggestion.length, 1);
+  assert.ok(r.suggestion[0].startsWith('cutting into my cabin wall'));
+  const member = JSON.parse(JSON.stringify(joinable).replace('CAN_JOIN', 'CAN_LEAVE'));
+  assert.deepEqual(scanJson(member).suggestion, []);
+});
+
 test('right-rail ad object with sponsored_data yields title and description', () => {
   const side = { nodes: [{ rhc_ad: { title: 'The AI for problem solvers | Claude', description: 'A product designer explains how it was built', sponsored_data: { ad_id: '9' } } }] };
   const keys = adKeysFromJson(side);

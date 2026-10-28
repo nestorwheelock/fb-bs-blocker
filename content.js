@@ -12,6 +12,8 @@
   // Text of every ad Facebook's own data names: from inline JSON in the page and from the
   // feed responses hook_main.js reads. A unit showing that text is an ad whatever it is labelled.
   const adKeys = new Set();
+  // Text of posts from groups the viewer has not joined (the Join button), same sources.
+  const suggestKeys = new Set();
   const scannedScripts = new WeakSet();
   let railSeen = new WeakMap();
 
@@ -29,13 +31,17 @@
     if (!verdict.hide && settings.ads && FBFAds.unitIsAd(el.textContent, adKeys)) {
       verdict = { hide: true, reason: 'ad', detail: 'data' };
     }
+    if (!verdict.hide && settings.suggestions && FBFAds.unitIsAd(el.textContent, suggestKeys)) {
+      verdict = { hide: true, reason: 'suggestion', detail: 'group-join' };
+    }
     if (verdict.hide) el.setAttribute(HIDDEN, verdict.reason);
     else el.removeAttribute(HIDDEN);
   }
 
-  function addKeys(keys) {
+  function addKeys(keys, sKeys) {
     let added = false;
     for (const k of keys) if (!adKeys.has(k)) { adKeys.add(k); added = true; }
+    for (const k of sKeys || []) if (!suggestKeys.has(k)) { suggestKeys.add(k); added = true; }
     if (added) { seen = new WeakMap(); railSeen = new WeakMap(); }
     return added;
   }
@@ -44,7 +50,8 @@
     for (const s of document.querySelectorAll('script[type="application/json"]')) {
       if (scannedScripts.has(s)) continue;
       scannedScripts.add(s);
-      addKeys(FBFAds.adKeysFromText(s.textContent || ''));
+      const r = FBFAds.scanText(s.textContent || '');
+      addKeys(r.ad, r.suggestion);
     }
   }
 
@@ -74,7 +81,7 @@
     for (const el of units) evaluate(el);
     hideRail(units);
     console.log('[fbf] v' + chrome.runtime.getManifest().version, units.length + ' units',
-      adKeys.size + ' ad keys', document.querySelectorAll('[' + HIDDEN + ']').length + ' hidden');
+      adKeys.size + ' ad keys', suggestKeys.size + ' join keys', document.querySelectorAll('[' + HIDDEN + ']').length + ' hidden');
   }
 
   function schedule() {
@@ -103,7 +110,8 @@
   // message too; the worst it can do is hide something, so it is not authenticated.
   window.addEventListener('message', ev => {
     const d = ev.data;
-    if (ev.source === window && d && d.source === 'fbf-ads' && Array.isArray(d.keys) && addKeys(d.keys)) schedule();
+    if (ev.source === window && d && d.source === 'fbf-ads' && Array.isArray(d.keys)
+      && addKeys(d.keys, Array.isArray(d.suggestionKeys) ? d.suggestionKeys : [])) schedule();
   });
 
   new MutationObserver(schedule).observe(document.documentElement, {

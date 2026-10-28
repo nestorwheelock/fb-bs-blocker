@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FB Filter",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Hides ads, follow suggestions and political posts in the Facebook feed.",
   "permissions": ["storage"],
   "host_permissions": ["https://www.facebook.com/*", "https://m.facebook.com/*"],

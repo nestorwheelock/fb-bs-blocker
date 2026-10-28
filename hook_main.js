@@ -8,8 +8,10 @@
 
   function report(text) {
     try {
-      const keys = FBFAds.adKeysFromText(text);
-      if (keys.length) window.postMessage({ source: 'fbf-ads', keys }, location.origin);
+      const r = FBFAds.scanText(text);
+      if (r.ad.length || r.suggestion.length) {
+        window.postMessage({ source: 'fbf-ads', keys: r.ad, suggestionKeys: r.suggestion }, location.origin);
+      }
     } catch (_) { /* a response that does not parse is not an ad source */ }
   }
 
