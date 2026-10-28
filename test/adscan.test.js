@@ -106,6 +106,20 @@ test('the longer of two viewer names wins, in either order', () => {
   assert.equal(scanText(body).viewer, 'Nestor Wheelock');
 });
 
+test('a right-column card is keyed on its title and domain together', () => {
+  const { scanJson, railMatches } = require('../adscan.js');
+  const side = { nodes: [
+    { rhc_ad: { title: 'Claude', subtitle: 'claude.com', description: 'A new model and a redesigned voice mode.' }, sponsored_data: { ad_id: '1' } },
+    { rhc_ad: { title: 'Free PrEP + DoxyPEP', subtitle: 'heymistr.com', description: 'Online process.' }, sponsored_data: { ad_id: '2' } },
+  ] };
+  const rails = new Set(scanJson(side).rail);
+  assert.equal(rails.size, 2);
+  assert.equal(railMatches('Claude\nclaude.com', rails), true);
+  assert.equal(railMatches('FREE PrEP + DoxyPEP  heymistr.com', rails), true);
+  assert.equal(railMatches('Claude said hello to Sam', rails), false, 'a title without its domain must not match');
+  assert.equal(railMatches('anything', new Set()), false);
+});
+
 test('right-rail ad object with sponsored_data yields title and description', () => {
   const side = { nodes: [{ rhc_ad: { title: 'The AI for problem solvers | Claude', description: 'A product designer explains how it was built', sponsored_data: { ad_id: '9' } } }] };
   const keys = adKeysFromJson(side);

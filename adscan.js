@@ -72,6 +72,15 @@
         collect(unitOf(frames, n), out.ad, '', adTextField);
       } else if (n.sponsored_data && typeof n.sponsored_data === 'object') {
         collect(n, out.ad, '', adTextField);
+        // A right-column card shows only the title and the domain (`subtitle`), and a title
+        // can be a word ("Claude"). Key on both, so a short title alone never matches.
+        // In the data the card's fields sit in a nested `rhc_ad` beside `sponsored_data`.
+        const card = n.rhc_ad && typeof n.rhc_ad === 'object' ? n.rhc_ad : n;
+        if (typeof card.title === 'string' && card.title.length >= 3) {
+          // a subtitle that is a full URL is not what the card displays; key on the title alone
+          const sub = typeof card.subtitle === 'string' && !/^https?:/i.test(card.subtitle) ? card.subtitle : '';
+          out.rail.add(normalize(card.title) + '\u0001' + normalize(sub));
+        }
       }
       if (n.viewer_forum_join_state === 'CAN_JOIN') {
         collect(unitOf(frames, n), out.suggestion, '', messageField);
@@ -93,14 +102,14 @@
 
   // -> { ad: string[], suggestion: string[], viewer: string|null }
   function scanJson(value) {
-    const out = { ad: new Set(), suggestion: new Set(), viewer: null };
+    const out = { ad: new Set(), suggestion: new Set(), rail: new Set(), viewer: null };
     walk(value, [], out);
-    return { ad: Array.from(out.ad), suggestion: Array.from(out.suggestion), viewer: out.viewer };
+    return { ad: Array.from(out.ad), suggestion: Array.from(out.suggestion), rail: Array.from(out.rail), viewer: out.viewer };
   }
 
   // A response body: one JSON document, newline-delimited JSON, or either behind `for (;;);`.
   function scanText(text) {
-    const none = { ad: [], suggestion: [], viewer: null };
+    const none = { ad: [], suggestion: [], rail: [], viewer: null };
     if (typeof text !== 'string' || !MARKERS.some(m => text.indexOf(m) >= 0)) return none;
     const body = text.replace(/^\s*for\s*\(;;\);\s*/, '');
     const docs = [];
@@ -113,14 +122,16 @@
     }
     const ad = new Set();
     const suggestion = new Set();
+    const rail = new Set();
     let viewer = null;
     for (const d of docs) {
       const r = scanJson(d);
       r.ad.forEach(k => ad.add(k));
       r.suggestion.forEach(k => suggestion.add(k));
+      r.rail.forEach(k => rail.add(k));
       if (r.viewer && (!viewer || r.viewer.length > viewer.length)) viewer = r.viewer;
     }
-    return { ad: Array.from(ad), suggestion: Array.from(suggestion), viewer };
+    return { ad: Array.from(ad), suggestion: Array.from(suggestion), rail: Array.from(rail), viewer };
   }
 
   function adKeysFromJson(value) { return scanJson(value).ad; }
@@ -134,5 +145,16 @@
     return false;
   }
 
-  return { scanJson, scanText, adKeysFromJson, adKeysFromText, unitIsAd, normalize, KEY_LEN };
+  // Does a right-column card's text show a rail ad: its title and its domain, both?
+  function railMatches(cardText, rails) {
+    if (!rails || (!rails.size && !rails.length)) return false;
+    const hay = normalize(cardText);
+    for (const k of rails) {
+      const parts = k.split('\u0001');
+      if (hay.indexOf(parts[0]) >= 0 && (!parts[1] || hay.indexOf(parts[1]) >= 0)) return true;
+    }
+    return false;
+  }
+
+  return { scanJson, scanText, adKeysFromJson, adKeysFromText, unitIsAd, railMatches, normalize, KEY_LEN };
 });

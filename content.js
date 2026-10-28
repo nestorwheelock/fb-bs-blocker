@@ -22,6 +22,8 @@
   // Text of posts to suppress as suggestions: a group the viewer has not joined (Join button)
   // or a profile or page the viewer could follow (Follow button), same sources.
   const suggestKeys = new Set();
+  // Right-column ads: "title\u0001domain", matched against link cards outside the feed.
+  const railKeys = new Set();
   const scannedScripts = new WeakSet();
   let railSeen = new WeakMap();
   // The viewer's own name, from the comment box on every post. Their own posts are never
@@ -63,10 +65,11 @@
     }
   }
 
-  function addKeys(keys, sKeys, who) {
+  function addKeys(keys, sKeys, who, rKeys) {
     let added = false;
     for (const k of keys) if (!adKeys.has(k)) { adKeys.add(k); added = true; }
     for (const k of sKeys || []) if (!suggestKeys.has(k)) { suggestKeys.add(k); added = true; }
+    for (const k of rKeys || []) if (!railKeys.has(k)) { railKeys.add(k); added = true; }
     if (who && (viewer === null || who.length > viewer.length)) { viewer = who; added = true; }
     if (added) { seen = new WeakMap(); railSeen = new WeakMap(); lastSlow = 0; }
     return added;
@@ -77,21 +80,24 @@
       if (scannedScripts.has(s)) continue;
       scannedScripts.add(s);
       const r = FBFAds.scanText(s.textContent || '');
-      addKeys(r.ad, r.suggestion, r.viewer);
+      addKeys(r.ad, r.suggestion, r.viewer, r.rail);
     }
   }
 
   // Right-column ads are not feed posts: hide the link card whose text is an ad's, then the
   // "Sponsored" heading above them.
   function hideRail(units) {
-    if (!settings.ads || adKeys.size === 0) return;
+    if (!settings.ads || (adKeys.size === 0 && railKeys.size === 0)) return;
     const inUnit = el => units.some(u => u.contains(el));
     for (const a of document.querySelectorAll('a[href]')) {
       const len = (a.textContent || '').length;
       if (len === 0 || len > 600 || railSeen.get(a) === len) continue;
       railSeen.set(a, len);
       if (inUnit(a)) continue;
-      if (FBFAds.unitIsAd(a.textContent, adKeys)) a.setAttribute(HIDDEN, 'ad');
+      if (FBFAds.unitIsAd(a.textContent, adKeys) || FBFAds.railMatches(a.textContent, railKeys)) {
+        a.setAttribute(HIDDEN, 'ad');
+        console.log('[fbf] hide rail', (a.textContent || '').slice(0, 70));
+      }
     }
     if (document.querySelector('a[' + HIDDEN + '="ad"]:not([aria-posinset] *)')) {
       for (const h of document.querySelectorAll('span,h2,h3')) {
@@ -118,7 +124,7 @@
     if (slow) hideRail(units);
 
     const line = 'v' + chrome.runtime.getManifest().version + ' ' + units.length + ' units, ' + adKeys.size +
-      ' ad keys, ' + suggestKeys.size + ' suggestion keys, ' + document.querySelectorAll('[' + HIDDEN + ']').length +
+      ' ad keys, ' + railKeys.size + ' rail keys, ' + suggestKeys.size + ' suggestion keys, ' + document.querySelectorAll('[' + HIDDEN + ']').length +
       ' hidden' + (viewer ? ', viewer known' : '');
     if (line !== lastReport) { lastReport = line; console.log('[fbf]', line); }
   }
@@ -153,7 +159,8 @@
   window.addEventListener('message', ev => {
     const d = ev.data;
     if (ev.source === window && d && d.source === 'fbf-ads' && Array.isArray(d.keys)
-      && addKeys(d.keys, Array.isArray(d.suggestionKeys) ? d.suggestionKeys : [], typeof d.viewer === 'string' ? d.viewer : null)) schedule();
+      && addKeys(d.keys, Array.isArray(d.suggestionKeys) ? d.suggestionKeys : [], typeof d.viewer === 'string' ? d.viewer : null,
+        Array.isArray(d.railKeys) ? d.railKeys : [])) schedule();
   });
 
   const observer = new MutationObserver(schedule);

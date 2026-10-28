@@ -9,8 +9,8 @@
   function report(text) {
     try {
       const r = FBFAds.scanText(text);
-      if (r.ad.length || r.suggestion.length || r.viewer) {
-        window.postMessage({ source: 'fbf-ads', keys: r.ad, suggestionKeys: r.suggestion, viewer: r.viewer }, location.origin);
+      if (r.ad.length || r.suggestion.length || r.rail.length || r.viewer) {
+        window.postMessage({ source: 'fbf-ads', keys: r.ad, suggestionKeys: r.suggestion, railKeys: r.rail, viewer: r.viewer }, location.origin);
       }
     } catch (_) { /* a response that does not parse is not an ad source */ }
   }
